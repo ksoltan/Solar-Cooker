@@ -1,3 +1,5 @@
+% Answers the design question of what kind of material will be the most
+% cost effective and efficient for a solar cooker.
 function solar_cooker()
 % Models the internal energy of the surface of a pot and the water inside
 % of it over time, heated from the sun's solar energy.
