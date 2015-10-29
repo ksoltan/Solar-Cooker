@@ -84,7 +84,7 @@ function solar_cooker()
                           % only when the function is either increasing (1) or 
                           % decreasing (-1)
     end
-    
+    %Katya is beautiful
     function plot_cooker_specs()
 %        cooker_SA = 8 : 10; % m^2
 %        reflection_efficiency = 0.95 : 0.01 : 0.99;
