@@ -8,13 +8,13 @@ function solar_cooker()
     depth_cooker = 0.5;
     A_cooker = pi * radius_cooker / 6 / depth_cooker^2 * ...
         ((radius_cooker^2 + 4 * depth_cooker^2)^(3/2) - ...
-        radius_cooker^3) % m^2
+        radius_cooker^3); % m^2
     k = 150; % W/m/K average of cast iron conductivity
     radius_pot = 0.3; %m inner radius where water is at
-    height_water = 0.2; %m
+    height_water = 2 / 3 * radius_pot; %m
     height_pot = 0.3; %m
     density_pot = 1300; % kg / m^3
-    d = 0.01; %m
+    d = 0.01; %m thickness of the pot walls
     mass_pot = pi * (radius_pot + d)^2 * height_pot * density_pot;
     c_pot = 500; % J / (kg * K)
     % assuming the pot is a cylinder, short and stout with the lid on
@@ -24,15 +24,15 @@ function solar_cooker()
     mass_water = pi * radius_pot^2 * height_water; %density is 1 kg/m^3
     c_water = 4186; % J /(kg * K)
     Tenv = 273 + 30; % K
-    Twater = 273 + 15; % CHANGE LATA
+    Twater = 273 + 10; % CHANGE LATA
+    Tpot = 273 + 10;
     e = 0.97; % reflection efficiency %%CAN MODIFY TO TAKE INTO ACCOUNT
     % DIFFERENT COOKER SHAPES
     Tboil = 100 + 273; %K
     
     emmisivity = 0.65; % of cast iron
     sigma = 5.67e-8; %w/m^2/K Stephen Boltzmann's constnat
-    h = k / d; % heat transfer coefficient of pot
-    
+     
     function res = change_U_system(t, internal_energies)
         % Params: internal energy of pot, internal energy of water
         temp_pot = internal_energies(1) / mass_pot / c_pot;
@@ -65,7 +65,7 @@ function solar_cooker()
         e = reflection_efficiency;
         
         % Make event that will stop ode45 when the water boils
-        [t, u, TE, UE] = ode23(@change_U_system, [0, 50000], [Tenv * mass_pot * c_pot, ...
+        [t, u, TE, UE] = ode23(@change_U_system, [0, 50000], [Tpot * mass_pot * c_pot, ...
         Twater * mass_water * c_water], options);
         res = TE;
         if isempty(TE)
@@ -86,39 +86,74 @@ function solar_cooker()
                           % only when the function is either increasing (1) or 
                           % decreasing (-1)
     end
-    %Katya is beautiful
-    function plot_cooker_specs()
-%        cooker_SA = 8 : 10; % m^2
-%        reflection_efficiency = 0.95 : 0.01 : 0.99;
-%        Z = [0, 0, 0];
-%        for a = cooker_SA
-%            for ee = reflection_efficiency
-%                T = get_time_to_boil(ee, a);
-%                fprintf('Reflectivity: %d, area : %d, time to boil: %d\n', ee, a, T)
-%                Z = [Z ; [a, ee, T]];
-%            end
-%        end
-%        contourf(Z);
-        %cooker_SA = 1 : 10;
-        reflection_efficiency = 0.85 : 0.01 : 0.99;
-        for i = 1 : length(reflection_efficiency)
-            t = get_time_to_boil(emmisivity, reflection_efficiency(i));
-            T(i) = t;
-        end
-        plot(reflection_efficiency, T);
+
+    function model(params)
+        % Vary the parameters: different cooker SA, reflectivity, pot
+        % thickness, water height, radius of pot    
+        A_cooker = params(1);
+        e = params(2);
+        d = params(3);
+        radius_pot = params(4);
+        height_water = 2 / 3 * radius_pot; %m
+        mass_pot = pi * (radius_pot + d)^2 * height_pot * density_pot;
+        % assuming the pot is a cylinder, short and stout with the lid on
+        SA_pot_in = 2 * pi * radius_pot * height_pot + 2 * pi * radius_pot^2;
+        SA_pot_out = 2 * pi * (radius_pot + d) * height_pot...
+        + 2 * pi * (radius_pot + d)^2;
+        mass_water = pi * radius_pot^2 * height_water; %density is 1 kg/m^3
+
+        fig = params(5); % figure to plot the relationships on
+        
+        hold on
+        [time, internal_energies] = ode23(@change_U_system, [0, 50000], ...
+            [Tpot * mass_pot * c_pot, ...
+        Twater * mass_water * c_water], options);
+        % Plot temperature of water vs time
+        figure(2 * fig - 1)
+        plot(time / 60, internal_energies(:, 2) / mass_water / c_water - 273)
+        
+        hold on
+        % Plot temperature of POT vs time
+        figure(2 * fig)
+        plot(time / 60, internal_energies(:, 1) / mass_pot / c_pot - 273)
+    end
+
+    function validation()
+       % For validation, produce a couple of graphs:
+       SA = [4, 7, 10]; % m^2
+       E = [0.65, 0.8, 0.97];
+       D = [0.01, 0.03, 0.07];
+       R = [0.3, 0.5, 0.7];
+       SA_orig = 7;
+       e_orig = 0.97;
+       d_orig = 0.01;
+       radius_pot_orig = 0.3;
+       % 1) vary the SA of the cooker for constant other things
+       for sa = SA
+          model([sa, e_orig, d_orig, radius_pot_orig, 1]) 
+       end
+       
+       % 2) vary the reflectivity constant
+       for ee = E
+           model([SA_orig, ee, d_orig, radius_pot_orig, 2])
+       end
+       
+       % 3) vary the thickness of the pot
+       for dd = D
+           model([SA_orig, e_orig, dd, radius_pot_orig, 3])
+       end
+       
+       % 4) vary the radius of pot
+       for r = R
+           model([SA_orig, e_orig, d_orig, r, 4])
+       end
     end
     
-%     [t, u] = ode45(@change_U_system, [0, 100000], [Tenv * mass_pot * c_pot, ...
-%         Twater * mass_water * c_water], options);
-%     % Plot temperature of water vs time
-%     figure(1)
-%     plot(t / 60, u(:, 2) / mass_water / c_water - 273)
-%     % Plot temperature of POT vs time
-%     figure(2)
-%     plot(t / 60, u(:, 1) / mass_pot / c_pot - 273)
+    % Main function that solar_cooker will run
+    function main()
+       validation() 
+    end
 
-%    get_time_to_boil(e, A_cooker)
-    figure(3)
-    plot_cooker_specs;
+    main()
 
 end
