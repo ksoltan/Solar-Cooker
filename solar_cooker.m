@@ -10,7 +10,7 @@ function solar_cooker()
         ((radius_cooker^2 + 4 * depth_cooker^2)^(3/2) - ...
         radius_cooker^3); % m^2
     k = 150; % W/m/K average of cast iron conductivity
-    radius_pot = 0.3; %m inner radius where water is at
+    radius_pot = 0.134; %m inner radius where water is at
     height_water = 2 / 3 * radius_pot; %m
     height_pot = 0.3; %m
     density_pot = 1300; % kg / m^3
@@ -65,7 +65,7 @@ function solar_cooker()
         e = reflection_efficiency;
         
         % Make event that will stop ode45 when the water boils
-        [t, u, TE, UE] = ode23(@change_U_system, [0, 50000], [Tpot * mass_pot * c_pot, ...
+        [t, u, TE, UE] = ode23(@change_U_system, [0, 6000], [Tpot * mass_pot * c_pot, ...
         Twater * mass_water * c_water], options);
         res = TE;
         if isempty(TE)
@@ -105,29 +105,29 @@ function solar_cooker()
         fig = params(5); % figure to plot the relationships on
         
         hold on
-        [time, internal_energies] = ode23(@change_U_system, [0, 50000], ...
+        [time, internal_energies] = ode23(@change_U_system, [0, 6000], ...
             [Tpot * mass_pot * c_pot, ...
         Twater * mass_water * c_water], options);
         % Plot temperature of water vs time
         figure(2 * fig - 1)
         plot(time / 60, internal_energies(:, 2) / mass_water / c_water - 273)
         
-        hold on
-        % Plot temperature of POT vs time
-        figure(2 * fig)
-        plot(time / 60, internal_energies(:, 1) / mass_pot / c_pot - 273)
+%         hold on
+%         % Plot temperature of POT vs time
+%         figure(2 * fig)
+%         plot(time / 60, internal_energies(:, 1) / mass_pot / c_pot - 273)
     end
 
     function validation()
        % For validation, produce a couple of graphs:
-       SA = [4, 7, 10]; % m^2
+       SA = [1, 3, 5]; % m^2
        E = [0.65, 0.8, 0.97];
-       D = [0.01, 0.03, 0.07];
-       R = [0.3, 0.5, 0.7];
-       SA_orig = 7;
+%        D = [0.01, 0.03, 0.07];
+%        R = [0.3, 0.5, 0.7];
+       SA_orig = 3;
        e_orig = 0.97;
        d_orig = 0.01;
-       radius_pot_orig = 0.3;
+       radius_pot_orig = 0.134;
        % 1) vary the SA of the cooker for constant other things
        for sa = SA
           model([sa, e_orig, d_orig, radius_pot_orig, 1]) 
@@ -138,15 +138,15 @@ function solar_cooker()
            model([SA_orig, ee, d_orig, radius_pot_orig, 2])
        end
        
-       % 3) vary the thickness of the pot
-       for dd = D
-           model([SA_orig, e_orig, dd, radius_pot_orig, 3])
-       end
-       
-       % 4) vary the radius of pot
-       for r = R
-           model([SA_orig, e_orig, d_orig, r, 4])
-       end
+%        % 3) vary the thickness of the pot
+%        for dd = D
+%            model([SA_orig, e_orig, dd, radius_pot_orig, 3])
+%        end
+%        
+%        % 4) vary the radius of pot
+%        for r = R
+%            model([SA_orig, e_orig, d_orig, r, 4])
+%        end
     end
     
     % Main function that solar_cooker will run
